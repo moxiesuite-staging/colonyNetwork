@@ -201,7 +201,7 @@ class ReputationMiner {
     interimHash = await this.reputationTree.getRootHash(); // eslint-disable-line no-await-in-loop
     jhLeafValue = this.getJRHEntryValueAsBytes(interimHash, this.nReputations);
     const updateNumber = new BN(logEntry[5].add(j).toString());
-    const score = this.getScore(updateNumber, logEntry);
+    let score = this.getScore(updateNumber, logEntry);
 
     if (updateNumber.toString() === "0") {
       // TODO If it's not already this value, then something has gone wrong, and we're working with the wrong state.
@@ -214,7 +214,6 @@ class ReputationMiner {
       newestReputationProof = await this.getNewestReputationProofObject(updateNumber);
     }
     await this.justificationTree.insert(`0x${updateNumber.toString(16, 64)}`, jhLeafValue, { gasLimit: 4000000 }); // eslint-disable-line no-await-in-loop
-
     const key = await this.getKeyForUpdateNumber(updateNumber);
     const nextUpdateProof = await this.getReputationProofObject(key);
 
@@ -231,9 +230,57 @@ class ReputationMiner {
 
     const [skillId, skillAddress] = await this.getSkillIdAndAddressForUpdateInLogEntry(j, logEntry); // eslint-disable-line no-await-in-loop
 
-    // TODO: Include updates for all child skills if x.amount is negative
+    // For reputation loss, when updating child skills, adjust reputation amount lost
+    const nUpdates = new BN(logEntry[4].toString());
+    let [nParents] = await this.colonyNetwork.getSkill(logEntry[2]);
+    nParents = new BN(nParents.toString());
+    const nChildUpdates = nUpdates
+      .divn(2)
+      .subn(1)
+      .sub(nParents);
+
+    const bnScore = new BN(score.toString());
+    // When reputation score update is negative, adjust its value for child reputation updates
+    if (bnScore.isNeg()) {
+      // Child updates are two sets: colonywide sums for children - located in the first nChildUpdates,
+      // and user-specific updates located in the first nChildUpdates of the second half of the nUpdates set.
+      if (j.lt(nChildUpdates) || (j.gte(nUpdates.divn(2)) && j.lt(nUpdates.divn(2).add(nChildUpdates)))) {
+        // Get current reputation amount of the actual skill key we are updating parents and children of.
+        // This is the user reputation for the skill, which is positioned at the end of the current logEntry nUpdates.
+        const updateNumberForActualUserSkillRep = updateNumber
+          .sub(j)
+          .add(nUpdates)
+          .subn(1);
+        const keyForActualUserSkillRep = await this.getKeyForUpdateNumber(updateNumberForActualUserSkillRep.toNumber());
+        const keyAlreadyExists = this.reputations[keyForActualUserSkillRep] !== undefined;
+
+        if (keyAlreadyExists) {
+          // Look up value from our JSON.
+          const valueForActualUserSkillRep = this.reputations[keyForActualUserSkillRep];
+          const existingValueForActualUserSkillRep = ethers.utils.bigNumberify(valueForActualUserSkillRep.slice(0, 66));
+          // It is possible the reputation value exists but it's 0, in which case
+          if (!existingValueForActualUserSkillRep.isZero()) {
+            const valueChild = this.reputations[key];
+            const existingValueChild = ethers.utils.bigNumberify(valueChild.slice(0, 66));
+            // todo bn.js doesn't have decimals so is fraction precision enough here?
+            const targetScore = existingValueChild.mul(bnScore).div(existingValueForActualUserSkillRep);
+            // const delta = existingValueChild.sub(targetScore);
+            // console.log('delta', delta.toString());
+            // When updating the colony wide totals
+            // if (j.lt(nChildUpdates)) {
+            //  score = delta;
+            // } else if (j.gte(nUpdates.divn(2)) && j.lt(nUpdates.divn(2).add(nChildUpdates))) {
+            // Updating the user totals
+            score = targetScore;
+            // }
+            console.log("score", score.toString());
+          }
+        }
+      }
+    }
+
     // We update colonywide sums first (children, parents, skill)
-    // Then the user-specifc sums in the order children, parents, skill.
+    // Then the user-specific sums in the order children, parents, skill.
     await this.insert(logEntry[3], skillId, skillAddress, score, updateNumber); // eslint-disable-line no-await-in-loop
   }
 
@@ -347,7 +394,6 @@ class ReputationMiner {
     const repCycle = new ethers.Contract(addr, this.repCycleContractDef.abi, this.realWallet);
 
     const logEntry = await repCycle.getReputationUpdateLogEntry(logEntryNumber.toString());
-
     const [skillId, userAddress] = await this.getSkillIdAndAddressForUpdateInLogEntry(updateNumber.sub(new BN(logEntry[5].toString())), logEntry);
     const key = `0x${new BN(logEntry[3].slice(2), 16).toString(16, 40)}${new BN(skillId.toString()).toString(16, 64)}${new BN(
       userAddress.slice(2),
@@ -695,7 +741,6 @@ class ReputationMiner {
       16,
       40
     )}`;
-    // const keyAlreadyExists = await this.keyExists(key);
     // If we already have this key, then we lookup the unique identifier we assigned this key.
     // Otherwise, give it the new one.
     let value;
