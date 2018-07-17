@@ -226,8 +226,18 @@ contract ColonyNetwork is ColonyNetworkStorage {
   }
 
   function getParentSkillId(uint _skillId, uint _parentSkillIndex) public view returns (uint256) {
+    if (_parentSkillIndex == 0) {
+      return _skillId;
+    }
+
     Skill storage skill = skills[_skillId];
-    return skill.parents[_parentSkillIndex];
+    for (uint i; i < skill.parents.length; i++) {
+      if (2**(i+1) > _parentSkillIndex) {
+        uint _newSkillId = skill.parents[2**i];
+        uint _newParentSkillIndex = _parentSkillIndex - 2**i;
+        return getParentSkillId(_newSkillId, _newParentSkillIndex);
+      }
+    }
   }
 
   function getChildSkillId(uint _skillId, uint _childSkillIndex) public view returns (uint256) {
