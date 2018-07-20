@@ -54,6 +54,18 @@ contract ColonyNetworkStaking is ColonyNetworkStorage {
     clny.transfer(msg.sender, _amount);
   }
 
+  function withdraw2(uint256 _amount) public {
+    uint256 balance = stakedBalances[msg.sender];
+    require(balance >= _amount);
+    bytes32 submittedHash;
+    (submittedHash, , , , , , , , , , ) = ReputationMiningCycle(activeReputationMiningCycle).reputationHashSubmissions(msg.sender);
+    bool hasRequesterSubmitted = submittedHash == 0x0 ? false : true;
+    require(hasRequesterSubmitted==false);
+    stakedBalances[msg.sender] -= _amount;
+    ERC20Extended clny = ERC20Extended(IColony(metaColony).getToken());
+    clny.transfer(msg.sender, _amount);
+  }
+
   function getStakedBalance(address _user) public view returns (uint) {
     return stakedBalances[_user];
   }

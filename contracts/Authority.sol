@@ -40,6 +40,11 @@ contract Authority is DSRoles {
     setOwnerRoleCapability(colony, "removeAdminRole(address)");
     // Upgrade colony
     setOwnerRoleCapability(colony, "upgrade(uint256)");
+    // Set token issuance rate
+    setOwnerRoleCapability(colony, "setTokenIssuanceRate(uint256,uint256,uint256)");
+    // Mint initial tokens
+    setOwnerRoleCapability(colony, "mintInitialTokens(uint256)");
+    setOwnerRoleCapability(colony, "setTokenSupplyCeiling(uint256)");
 
     // Allocate funds
     setAdminRoleCapability(colony, "moveFundsBetweenPots(uint256,uint256,uint256,address)");

@@ -111,7 +111,7 @@ contract("All", accounts => {
     });
 
     it("when working with a Colony", async () => {
-      await colony.mintTokens(200);
+      await colony.mintInitialTokens(200);
       await colony.claimColonyFunds(tokenAddress);
       await colony.setAdminRole(EVALUATOR);
     });
@@ -338,7 +338,7 @@ contract("All", accounts => {
       await newToken.setOwner(colonyAddress);
 
       await fundColonyWithTokens(newColony, otherToken, initialFunding.toString());
-      await newColony.mintTokens(workerReputation.add(managerReputation).toString());
+      await newColony.mintInitialTokens(workerReputation.add(managerReputation).toString());
 
       await newColony.bootstrapColony([WORKER, MANAGER], [workerReputation.toString(), managerReputation.toString()]);
 

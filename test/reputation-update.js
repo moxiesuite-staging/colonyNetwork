@@ -1,5 +1,5 @@
 /* globals artifacts */
-import web3Utils from "web3-utils";
+import { toBN } from "web3-utils";
 import { BN } from "bn.js";
 
 import { MANAGER, WORKER, EVALUATOR, OTHER, MANAGER_PAYOUT, WORKER_PAYOUT } from "../helpers/constants";
@@ -45,6 +45,12 @@ contract("Colony Reputation Updates", () => {
     const metaColonyAddress = await colonyNetwork.getMetaColony.call();
     await colonyToken.setOwner(metaColonyAddress);
     metaColony = await IColony.at(metaColonyAddress);
+    await metaColony.setTokenSupplyCeiling(
+      toBN(2)
+        .pow(toBN(256))
+        .subn(1)
+        .toString()
+    );
     const amount = new BN(10)
       .pow(new BN(18))
       .mul(new BN(1000))
@@ -186,8 +192,7 @@ contract("Colony Reputation Updates", () => {
       });
       await metaColony.finalizeTask(taskId1);
       let repLogEntryWorker = await inactiveReputationMiningCycle.getReputationUpdateLogEntry(3);
-      const result = web3Utils
-        .toBN(WORKER_PAYOUT)
+      const result = toBN(WORKER_PAYOUT)
         .muln(3)
         .divn(2);
       assert.equal(repLogEntryWorker[1].toString(), result.toString());

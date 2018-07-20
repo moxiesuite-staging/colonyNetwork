@@ -74,10 +74,57 @@ contract Colony is ColonyStorage, PatriciaTreeProofs {
     setRoleAssignmentFunction(bytes4(keccak256("setTaskEvaluatorRole(uint256,address)")));
     setRoleAssignmentFunction(bytes4(keccak256("setTaskWorkerRole(uint256,address)")));
 
+    lastIssuenceTimestamp = now;
+
     // Initialise the root domain
     IColonyNetwork colonyNetwork = IColonyNetwork(colonyNetworkAddress);
     uint256 rootLocalSkill = colonyNetwork.getSkillCount();
     initialiseDomain(rootLocalSkill);
+  }
+
+  function setTokenIssuanceRate(uint256 _amount, uint256 _interval, uint256 _precision) public auth {
+    require(_amount > 0 && _interval > 0);
+    require(sub(now, lastIssuenceRateChangeTimestamp) >= 4 weeks);
+
+    // If we are setting the rate for the first time we will not go through these checks
+    if (issuanceRateAmount > 0 && issuanceRateInterval > 0) {
+      uint256 ratio1 = mul(issuanceRateAmount, _precision) / issuanceRateInterval;
+      uint256 ratio2 = mul(_amount, _precision) / _interval;
+      require(ratio1 > 0 && ratio2 > 0);
+      uint256 diff = (ratio1 > ratio2) ? sub(ratio1, ratio2) : sub(ratio2, ratio1);
+      require(diff > 0);
+      uint256 percent = mul(diff, 100) / ratio1;
+      require(percent <= 10);
+    }
+
+    lastIssuenceRateChangeTimestamp = now;
+
+    // TODO: Struct
+    issuanceRateAmount = _amount;
+    // TODO: rename to 'period'
+    issuanceRateInterval = _interval;
+  }
+
+  function setTokenSupplyCeiling(uint256 _amount) public auth {
+    require(_amount > token.totalSupply());
+    tokenSupplyCeiling = _amount;
+  }
+
+  function getTokenSupplyCeiling() public view returns (uint256) {
+    return tokenSupplyCeiling;
+  }
+
+  // TODO: return struct
+  function getTokenIssuanceRateAmount() public view returns (uint256) {
+    return issuanceRateAmount;
+  }
+
+  function getTokenIssuanceRateInterval() public view returns (uint256) {
+    return issuanceRateInterval;
+  }
+
+  function getLastIssuanceTimestamp() public view returns (uint256) {
+    return lastIssuenceTimestamp;
   }
 
   function bootstrapColony(address[] _users, int[] _amounts) public
@@ -94,10 +141,31 @@ contract Colony is ColonyStorage, PatriciaTreeProofs {
     }
   }
 
-  function mintTokens(uint _wad) public
+  function mintInitialTokens(uint256 _amount) public
   auth
+  isInBootstrapPhase
   {
-    return token.mint(_wad);
+    require(add(_amount, token.totalSupply()) <= tokenSupplyCeiling);
+    return token.mint(_amount);
+  }
+
+  function mintTokens(uint _amount) public
+  auth
+  returns (uint256)
+  {
+    require(add(_amount, token.totalSupply()) <= tokenSupplyCeiling);
+
+    uint256 timePassedFromLastIssuance = sub(now, lastIssuenceTimestamp);
+    uint256 totalAvailable = mul(timePassedFromLastIssuance, issuanceRateAmount) / issuanceRateInterval;
+
+    require(_amount <= totalAvailable);
+
+    uint256 time = mul(_amount, timePassedFromLastIssuance) / totalAvailable;
+    lastIssuenceTimestamp = add(lastIssuenceTimestamp, time);
+
+    token.mint(_amount);
+
+    return timePassedFromLastIssuance;
   }
 
   function mintTokensForColonyNetwork(uint _wad) public {

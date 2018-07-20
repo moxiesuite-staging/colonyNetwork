@@ -151,7 +151,15 @@ contract IColony {
 
   /// @notice Mint `_wad` amount of colony tokens. Secured function to authorised members
   /// @param _wad Amount to mint
-  function mintTokens(uint256 _wad) public;
+  function mintTokens(uint256 _wad) public returns (uint256);
+  function mintInitialTokens(uint _amount) public;
+  function getTokenIssuanceRateAmount() public view returns (uint256);
+  function getTokenIssuanceRateInterval() public view returns (uint256);
+  function getLastIssuanceTimestamp() public view returns (uint256);
+
+  function setTokenIssuanceRate(uint256 _amount, uint256 _interval, uint256 _precision) public;
+  function setTokenSupplyCeiling(uint256 _amount) public;
+  function getTokenSupplyCeiling() public view returns (uint256);
 
   /// @notice Mints CLNY in the Meta Colony and transfers them to the colony network
   /// Only allowed to be called on the Meta Colony by the colony network

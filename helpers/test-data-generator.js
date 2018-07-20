@@ -273,7 +273,7 @@ export async function giveUserCLNYTokensAndStake(colonyNetwork, address, _amount
 export async function fundColonyWithTokens(colony, token, tokenAmount) {
   const colonyToken = await colony.getToken.call();
   if (colonyToken === token.address) {
-    await colony.mintTokens(tokenAmount);
+    await colony.mintInitialTokens(tokenAmount);
   } else {
     await token.mint(tokenAmount);
     await token.transfer(colony.address, tokenAmount);

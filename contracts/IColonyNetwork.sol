@@ -160,6 +160,7 @@ contract IColonyNetwork {
   /// @dev Errors if the user has submitted a new reputation root hash or backed one someone else submitted in the current mining cycle
   /// @param amount CLNY tokens amount to withdraw
   function withdraw(uint256 amount) public;
+  function withdraw2(uint256 _amount) public;
 
   /// @notice Get the amount of staked CLNY tokens for user `_user`
   /// @param _user Address of the user whose balance we want to get

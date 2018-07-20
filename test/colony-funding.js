@@ -35,6 +35,12 @@ contract("Colony Funding", addresses => {
     const { colonyAddress } = logs[0].args;
     await token.setOwner(colonyAddress);
     colony = await IColony.at(colonyAddress);
+    await colony.setTokenSupplyCeiling(
+      toBN(2)
+        .pow(toBN(256))
+        .subn(1)
+        .toString()
+    );
     const otherTokenArgs = getTokenArgs();
     otherToken = await Token.new(...otherTokenArgs);
   });
@@ -585,7 +591,7 @@ contract("Colony Funding", addresses => {
 
     beforeEach(async () => {
       await fundColonyWithTokens(colony, otherToken, initialFunding.toString());
-      await colony.mintTokens(initialFunding.toString());
+      await colony.mintInitialTokens(initialFunding.toString());
       await colony.bootstrapColony([userAddress1], [userReputation.toString()]);
 
       await token.approve(tokenLocking.address, userReputation.toString(), {
@@ -908,6 +914,13 @@ contract("Colony Funding", addresses => {
       ({ colonyAddress } = logs[0].args);
       const colony2 = IColony.at(colonyAddress);
 
+      const tokenSupplyCeiling = toBN(2)
+        .pow(toBN(256))
+        .subn(1)
+        .toString();
+      await colony1.setTokenSupplyCeiling(tokenSupplyCeiling);
+      await colony2.setTokenSupplyCeiling(tokenSupplyCeiling);
+
       // Giving both colonies the capability to call `mint` function
       const adminRole = 1;
       const newRoles = await DSRoles.new();
@@ -920,8 +933,8 @@ contract("Colony Funding", addresses => {
       await fundColonyWithTokens(colony2, otherToken, initialFunding.toString());
 
       // Minting the tokens so we can give them to users
-      await colony1.mintTokens(userReputation.toString());
-      await colony2.mintTokens(userReputation.toString());
+      await colony1.mintInitialTokens(userReputation.toString());
+      await colony2.mintInitialTokens(userReputation.toString());
 
       // Giving the user colony's native tokens and reputation so they can participate in reward payout
       await colony1.bootstrapColony([userAddress1], [userReputation.toString()]);
@@ -997,6 +1010,13 @@ contract("Colony Funding", addresses => {
       ({ colonyAddress } = logs[0].args);
       const colony2 = IColony.at(colonyAddress);
 
+      const tokenSupplyCeiling = toBN(2)
+        .pow(toBN(256))
+        .subn(1)
+        .toString();
+      await colony1.setTokenSupplyCeiling(tokenSupplyCeiling);
+      await colony2.setTokenSupplyCeiling(tokenSupplyCeiling);
+
       // Giving both colonies the capability to call `mint` function
       const adminRole = 1;
       const newRoles = await DSRoles.new();
@@ -1009,8 +1029,8 @@ contract("Colony Funding", addresses => {
       await fundColonyWithTokens(colony2, otherToken, initialFunding.toString());
 
       // Minting the tokens so we can give them to users
-      await colony1.mintTokens(userReputation.toString());
-      await colony2.mintTokens(userReputation.toString());
+      await colony1.mintInitialTokens(userReputation.toString());
+      await colony2.mintInitialTokens(userReputation.toString());
 
       // Giving the user colony's native tokens and reputation so they can participate in reward payout
       await colony1.bootstrapColony([userAddress1], [userReputation.toString()]);
@@ -1115,11 +1135,17 @@ contract("Colony Funding", addresses => {
         await newToken.setOwner(colonyAddress);
         const newColony = await IColony.at(colonyAddress);
 
+        const tokenSupplyCeiling = toBN(2)
+          .pow(toBN(256))
+          .subn(1)
+          .toString();
+        await newColony.setTokenSupplyCeiling(tokenSupplyCeiling);
+
         const payoutTokenArgs = getTokenArgs();
         const payoutToken = await Token.new(...payoutTokenArgs);
         await fundColonyWithTokens(newColony, payoutToken, data.totalAmountOfPayoutTokens.toString());
         // Issuing colony's native tokens so they can be given to users in `bootstrapColony`
-        await newColony.mintTokens(data.totalReputation.toString());
+        await newColony.mintInitialTokens(data.totalReputation.toString());
 
         // Every user has equal amount of reputation and tokens (totalReputationAndTokens / 3)
         const reputationPerUser = data.totalReputation.div(toBN(3));
