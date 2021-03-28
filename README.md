@@ -1,4 +1,4 @@
-# Colony Network contracts
+# Moxie Colony Network contracts
 ## Install
 
 [![Greenkeeper badge](https://badges.greenkeeper.io/JoinColony/colonyNetwork.svg?token=12a1f49a1f7f9afa0b0af1370e6a4646c989cba0d90ec0d5b3872cb95c08facc&ts=1505828301742)](https://greenkeeper.io/)
